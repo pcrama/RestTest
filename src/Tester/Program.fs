@@ -11,6 +11,8 @@ open FsCheck
 // let urlIsNotLost (uri:string) = RestClient(uri).BaseUrl = new Uri(uri)
 
 type RequestModel() =
+    member private this.Attempts with set (x) =
+                                          this.Attempts <- x
     interface IRestRequest with
         /// <summary>
         /// Always send a multipart/form-data request - even when no Files are present.
@@ -124,17 +126,23 @@ type RequestModel() =
 
         member val OnBeforeDeserialization : Action<IRestResponse> = null with get, set
 
-        member this.IncreaseNumAttempts() : unit = failwith "Not implemented: IRestRequest.IncreaseNumAttempts() : unit"
+        member this.IncreaseNumAttempts() : unit =
+            this.set_Attempts ((this :> IRestRequest).Attempts + 1)
 
         member this.AddDecompressionMethod(decompressionMethod: Net.DecompressionMethods) : IRestRequest = failwith "Not implemented: IRestRequest.AddDecompressionMethod(decompressionMethod: Net.DecompressionMethods) : IRestRequest"
 
-        member this.AddQueryParameter(name: string, value: string) : IRestRequest = failwith "Not implemented: IRestRequest.AddQueryParameter(name: string, value: string) : IRestRequest"
+        member this.AddQueryParameter(name: string, value: string) : IRestRequest =
+            (this :> IRestRequest).AddParameter(name, value, ParameterType.QueryString)
 
-        member this.AddUrlSegment(name: string, value: string) : IRestRequest = failwith "Not implemented: IRestRequest.AddUrlSegment(name: string, value: string) : IRestRequest"
+        member this.AddUrlSegment(name: string, value: string) : IRestRequest =
+            (this :> IRestRequest).AddParameter(name, value, ParameterType.UrlSegment)
 
-        member this.AddCookie(name: string, value: string) : IRestRequest = failwith "Not implemented: IRestRequest.AddCookie(name: string, value: string) : IRestRequest"
 
-        member this.AddHeader(name: string, value: string) : IRestRequest = failwith "Not implemented: IRestRequest.AddHeader(name: string, value: string) : IRestRequest"
+        member this.AddCookie(name: string, value: string) : IRestRequest =
+            (this :> IRestRequest).AddParameter(name, value, ParameterType.Cookie)
+
+        member this.AddHeader(name: string, value: string) : IRestRequest =
+            (this :> IRestRequest).AddParameter(name, value, ParameterType.HttpHeader)
 
         member this.AddOrUpdateParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest = failwith "Not implemented: IRestRequest.AddOrUpdateParameter(name: string, value: obj, contentType: string, type: ParameterType) : IRestRequest"
 
@@ -156,11 +164,16 @@ type RequestModel() =
 
         member this.AddObject(obj: obj, [<ParamArray>] includedProperties: string []) : IRestRequest = failwith "Not implemented: IRestRequest.AddObject(obj: obj, [<ParamArray>] includedProperties: string []) : IRestRequest"
 
-        member this.AddXmlBody(obj: obj, xmlNamespace: string) : IRestRequest = failwith "Not implemented: IRestRequest.AddXmlBody(obj: obj, xmlNamespace: string) : IRestRequest"
+        member this.AddXmlBody(obj: obj, xmlNamespace: string) : IRestRequest =
+            (this :> IRestRequest).RequestFormat <- DataFormat.Xml
+            (this :> IRestRequest).AddBody(obj, xmlNamespace)
 
-        member this.AddXmlBody(obj: obj) : IRestRequest = failwith "Not implemented: IRestRequest.AddXmlBody(obj: obj) : IRestRequest"
+        member this.AddXmlBody(obj: obj) : IRestRequest =
+            (this :> IRestRequest).AddXmlBody(obj, "")
 
-        member this.AddJsonBody(obj: obj) : IRestRequest = failwith "Not implemented: IRestRequest.AddJsonBody(obj: obj) : IRestRequest"
+        member this.AddJsonBody(obj: obj) : IRestRequest =
+            (this :> IRestRequest).RequestFormat <- DataFormat.Json
+            (this :> IRestRequest).AddBody(obj, "")
 
         member this.AddBody(obj: obj) : IRestRequest = failwith "Not implemented: IRestRequest.AddBody(obj: obj) : IRestRequest"
 
