@@ -1,0 +1,16 @@
+* Setup
+#+BEGIN_SRC shell
+  # After `scoop install dotnet-sdk'
+  dotnet new sln -o RestTest
+  cd RestTest
+  dotnet new console -lang 'F#' -o src/Tester
+  cd src/Tester
+  dotnet add package FsCheck --version 2.10.6
+  # Package under test:
+  dotnet add package RestSharp --version 106.2.0
+#+END_SRC
+
+* Running
+#+BEGIN_SRC shell
+  cd src/Tester && dotnet run
+#+END_SRC
