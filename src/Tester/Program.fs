@@ -22,6 +22,23 @@ type RequestModel() =
         p.Type <- type_
         p
 
+    member this.Equals(o: RequestModel) : bool =
+        let upThis = this :> IRestRequest
+        let upO = o :> IRestRequest
+        (upThis.AlwaysMultipartFormData = upO.AlwaysMultipartFormData
+         && upThis.Parameters.Equals(upO.Parameters)
+         && upThis.Files.Equals(upO.Files)
+         && upThis.Method = upO.Method
+         && upThis.Resource = upO.Resource
+         && upThis.RequestFormat = upO.RequestFormat
+         && upThis.RootElement = upO.RootElement
+         && upThis.DateFormat = upO.DateFormat
+         && upThis.XmlNamespace = upO.XmlNamespace
+         && upThis.Timeout = upO.Timeout
+         && upThis.Attempts = upO.Attempts
+         && upThis.UseDefaultCredentials = upO.UseDefaultCredentials
+         && upThis.AllowedDecompressionMethods.Equals(upO.AllowedDecompressionMethods))
+
     interface IRestRequest with
         /// <summary>
         /// Always send a multipart/form-data request - even when no Files are present.
