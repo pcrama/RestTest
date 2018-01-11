@@ -13,6 +13,15 @@ open FsCheck
 type RequestModel() =
     member private this.Attempts with set (x) =
                                           this.Attempts <- x
+
+    static member private MakeParameterInstance (name, value, contentType, type_) =
+        let p = Parameter()
+        p.Name <- name
+        p.Value <- value
+        p.ContentType <- contentType
+        p.Type <- type_
+        p
+
     interface IRestRequest with
         /// <summary>
         /// Always send a multipart/form-data request - even when no Files are present.
@@ -23,13 +32,13 @@ type RequestModel() =
         /// Serializer to use when writing JSON request bodies. Used if RequestFormat is Json.
         /// By default the included JsonSerializer is used (currently using JSON.NET default serialization).
         /// </summary>
-        member val JsonSerializer : ISerializer = null with get, set
+        member val JsonSerializer : ISerializer = (JsonSerializer() :> ISerializer) with get, set
 
         /// <summary>
         /// Serializer to use when writing XML request bodies. Used if RequestFormat is Xml.
         /// By default the included XmlSerializer is used.
         /// </summary>
-        member val XmlSerializer : ISerializer = null with get, set
+        member val XmlSerializer : ISerializer = (XmlSerializer() :> ISerializer) with get, set
 
         /// <summary>
         /// Set this to write response to Stream rather than reading into memory.
@@ -129,7 +138,12 @@ type RequestModel() =
         member this.IncreaseNumAttempts() : unit =
             this.set_Attempts ((this :> IRestRequest).Attempts + 1)
 
-        member this.AddDecompressionMethod(decompressionMethod: Net.DecompressionMethods) : IRestRequest = failwith "Not implemented: IRestRequest.AddDecompressionMethod(decompressionMethod: Net.DecompressionMethods) : IRestRequest"
+        member this.AddDecompressionMethod(decompressionMethod: Net.DecompressionMethods) : IRestRequest =
+            let upCast = this :> IRestRequest
+            if upCast.AllowedDecompressionMethods.Contains(decompressionMethod)
+            then upCast
+            else upCast.AllowedDecompressionMethods.Add(decompressionMethod)
+                 upCast
 
         member this.AddQueryParameter(name: string, value: string) : IRestRequest =
             (this :> IRestRequest).AddParameter(name, value, ParameterType.QueryString)
@@ -144,21 +158,39 @@ type RequestModel() =
         member this.AddHeader(name: string, value: string) : IRestRequest =
             (this :> IRestRequest).AddParameter(name, value, ParameterType.HttpHeader)
 
-        member this.AddOrUpdateParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest = failwith "Not implemented: IRestRequest.AddOrUpdateParameter(name: string, value: obj, contentType: string, type: ParameterType) : IRestRequest"
+        member this.AddOrUpdateParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest =
+            (this :> IRestRequest).AddOrUpdateParameter(
+                RequestModel.MakeParameterInstance(name, value, contentType, type_))
 
-        member this.AddOrUpdateParameter(name: string, value: obj, type_: ParameterType) : IRestRequest = failwith "Not implemented: IRestRequest.AddOrUpdateParameter(name: string, value: obj, type: ParameterType) : IRestRequest"
+        member this.AddOrUpdateParameter(name: string, value: obj, type_: ParameterType) : IRestRequest =
+            (this :> IRestRequest).AddOrUpdateParameter(name, value, null, type_)
 
-        member this.AddOrUpdateParameter(name: string, value: obj) : IRestRequest = failwith "Not implemented: IRestRequest.AddOrUpdateParameter(name: string, value: obj) : IRestRequest"
+        member this.AddOrUpdateParameter(name: string, value: obj) : IRestRequest =
+            (this :> IRestRequest).AddOrUpdateParameter(name, value, ParameterType.GetOrPost)
 
-        member this.AddOrUpdateParameter(p: Parameter) : IRestRequest = failwith "Not implemented: IRestRequest.AddOrUpdateParameter(p: Parameter) : IRestRequest"
+        member this.AddOrUpdateParameter(p: Parameter) : IRestRequest =
+            let upCast = this :> IRestRequest
+            let compareByName = Predicate(fun (param : Parameter) -> param.Name = p.Name)
+            if upCast.Parameters.Exists(compareByName)
+            then let toUpdate = upCast.Parameters.Find(compareByName)
+                 toUpdate.Value <- p.Value // TODO: what about the type or contenttype?
+                 upCast
+            else upCast.AddParameter(p)
 
-        member this.AddParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest = failwith "Not implemented: IRestRequest.AddParameter(name: string, value: obj, contentType: string, type: ParameterType) : IRestRequest"
+        member this.AddParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest =
+            (this :> IRestRequest).AddParameter(
+                RequestModel.MakeParameterInstance(name, value, contentType, type_))
 
-        member this.AddParameter(name: string, value: obj, type_: ParameterType) : IRestRequest = failwith "Not implemented: IRestRequest.AddParameter(name: string, value: obj, type: ParameterType) : IRestRequest"
+        member this.AddParameter(name: string, value: obj, type_: ParameterType) : IRestRequest =
+            (this :> IRestRequest).AddParameter(name, value, null, ParameterType.GetOrPost)
 
-        member this.AddParameter(name: string, value: obj) : IRestRequest = failwith "Not implemented: IRestRequest.AddParameter(name: string, value: obj) : IRestRequest"
+        member this.AddParameter(name: string, value: obj) : IRestRequest =
+            (this :> IRestRequest).AddParameter(name, value, ParameterType.GetOrPost)
 
-        member this.AddParameter(p: Parameter) : IRestRequest = failwith "Not implemented: IRestRequest.AddParameter(p: Parameter) : IRestRequest"
+        member this.AddParameter(p: Parameter) : IRestRequest =
+            let upCast = this :> IRestRequest
+            upCast.Parameters.Add(p)
+            upCast
 
         member this.AddObject(obj: obj) : IRestRequest = failwith "Not implemented: IRestRequest.AddObject(obj: obj) : IRestRequest"
 
