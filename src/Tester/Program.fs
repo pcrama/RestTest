@@ -21,6 +21,7 @@ type RequestModel() =
         p.ContentType <- contentType
         p.Type <- type_
         p
+    member private this.InternalAllowedDecompressionMethods = Collections.Generic.List()
 
     member this.Equals(o: RequestModel) : bool =
         let upThis = this :> IRestRequest
@@ -148,7 +149,7 @@ type RequestModel() =
         /// <summary>
         /// List of Allowed Decompression Methods
         /// </summary>
-        member val AllowedDecompressionMethods : Collections.Generic.IList<Net.DecompressionMethods> = Collections.Generic.List() :> Collections.Generic.IList<Net.DecompressionMethods> with get
+        member this.AllowedDecompressionMethods = this.InternalAllowedDecompressionMethods :> Collections.Generic.IList<Net.DecompressionMethods>
 
         member val OnBeforeDeserialization : Action<IRestResponse> = null with get, set
 
