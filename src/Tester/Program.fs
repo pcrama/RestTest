@@ -256,24 +256,23 @@ type RequestModel() =
 
 
 let accept2types((t1, t2):string * string) =
-    if t1 = null || t2 = null || t1 = "" || t2 = "" || t1 = t2
-    then
-       true
-    else
-        let mutable add2ThenRemoveSecond = RestClient();
-        let mutable addOnlyFirst = RestClient();
-        add2ThenRemoveSecond.ClearHandlers();
-        addOnlyFirst.ClearHandlers();
-        add2ThenRemoveSecond.AddHandler(t1, JsonDeserializer());
-        addOnlyFirst.AddHandler(t1, JsonDeserializer());
-        add2ThenRemoveSecond.AddHandler(t2, XmlDeserializer());
-        add2ThenRemoveSecond.RemoveHandler(t2);
-        add2ThenRemoveSecond.DefaultParameters = addOnlyFirst.DefaultParameters
+    match (t1, t2) with
+        | (null, _) | (_, null) -> true
+        | _ when t1 = "" || t2 = "" || t1 = t2 -> true
+        | _ -> let add2ThenRemoveSecond = RestClient()
+               let addOnlyFirst = RestClient()
+               add2ThenRemoveSecond.ClearHandlers()
+               addOnlyFirst.ClearHandlers()
+               add2ThenRemoveSecond.AddHandler(t1, JsonDeserializer())
+               addOnlyFirst.AddHandler(t1, JsonDeserializer())
+               add2ThenRemoveSecond.AddHandler(t2, XmlDeserializer())
+               add2ThenRemoveSecond.RemoveHandler(t2)
+               add2ThenRemoveSecond.DefaultParameters = addOnlyFirst.DefaultParameters
 
 [<EntryPoint>]
 let main argv =
-    printfn "Hello World from F#!";
-    Check.One({ Config.Quick with MaxTest = 10; QuietOnSuccess=false }, accept2types);
+    printfn "Hello World from F#!"
+    Check.One({ Config.Quick with MaxTest = 10; QuietOnSuccess=false }, accept2types)
     let rm1 = RequestModel()
     let rm2 = RequestModel()
     let rm3 = RequestModel()
