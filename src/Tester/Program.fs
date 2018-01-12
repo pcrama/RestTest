@@ -10,17 +10,18 @@ open FsCheck
 
 // let urlIsNotLost (uri:string) = RestClient(uri).BaseUrl = new Uri(uri)
 
+let MakeParameterInstance (name, value, contentType, type_) =
+    let p = Parameter()
+    p.Name <- name
+    p.Value <- value
+    p.ContentType <- contentType
+    p.Type <- type_
+    p
+
 type RequestModel() =
     member private this.Attempts with set (x) =
                                           this.Attempts <- x
 
-    static member private MakeParameterInstance (name, value, contentType, type_) =
-        let p = Parameter()
-        p.Name <- name
-        p.Value <- value
-        p.ContentType <- contentType
-        p.Type <- type_
-        p
     member private this.InternalAllowedDecompressionMethods = Collections.Generic.List()
 
     member this.Equals(o: RequestModel) : bool =
@@ -177,8 +178,7 @@ type RequestModel() =
             (this :> IRestRequest).AddParameter(name, value, ParameterType.HttpHeader)
 
         member this.AddOrUpdateParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest =
-            (this :> IRestRequest).AddOrUpdateParameter(
-                RequestModel.MakeParameterInstance(name, value, contentType, type_))
+            (this :> IRestRequest).AddOrUpdateParameter(MakeParameterInstance(name, value, contentType, type_))
 
         member this.AddOrUpdateParameter(name: string, value: obj, type_: ParameterType) : IRestRequest =
             (this :> IRestRequest).AddOrUpdateParameter(name, value, null, type_)
@@ -196,8 +196,7 @@ type RequestModel() =
             else upCast.AddParameter(p)
 
         member this.AddParameter(name: string, value: obj, contentType: string, type_: ParameterType) : IRestRequest =
-            (this :> IRestRequest).AddParameter(
-                RequestModel.MakeParameterInstance(name, value, contentType, type_))
+            (this :> IRestRequest).AddParameter(MakeParameterInstance(name, value, contentType, type_))
 
         member this.AddParameter(name: string, value: obj, type_: ParameterType) : IRestRequest =
             (this :> IRestRequest).AddParameter(name, value, null, ParameterType.GetOrPost)
