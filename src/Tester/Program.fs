@@ -10,6 +10,14 @@ open FsCheck
 
 // let urlIsNotLost (uri:string) = RestClient(uri).BaseUrl = new Uri(uri)
 
+let CompareLists (key: ('a -> 'b)) (compare: 'a -> 'a -> bool) (ref: Collections.Generic.List<'a>) (oth: Collections.Generic.List<'a>) =
+    let len = ref.Count
+    (len = oth.Count
+     && (let d : Collections.Generic.Dictionary<'b, 'a> = Collections.Generic.Dictionary(len)
+         ref.ForEach(Action<'a>(fun x -> d.Add(key(x), x)))
+         oth.TrueForAll(Predicate<'a>(fun x -> let k = key x
+                                               d.ContainsKey(k) && (compare x (d.Item(k)))))))
+
 let MakeParameterInstance (name, value, contentType, type_) =
     let p = Parameter()
     p.Name <- name
@@ -17,6 +25,12 @@ let MakeParameterInstance (name, value, contentType, type_) =
     p.ContentType <- contentType
     p.Type <- type_
     p
+
+let CompareParameter (p: Parameter) (q: Parameter) =
+    p.Name = q.Name && p.Value = q.Value && p.ContentType = q.ContentType && p.Type = q.Type
+
+let CompareFileParameter (p: FileParameter) (q: FileParameter) =
+    p.Name = q.Name && p.ContentLength = q.ContentLength && p.ContentType = q.ContentType && p.FileName = q.FileName
 
 type RequestModel() =
     member private this.Attempts with set (x) =
@@ -27,19 +41,23 @@ type RequestModel() =
     member this.Equals(o: RequestModel) : bool =
         let upThis = this :> IRestRequest
         let upO = o :> IRestRequest
-        (upThis.AlwaysMultipartFormData = upO.AlwaysMultipartFormData
-         && upThis.Parameters.Equals(upO.Parameters)
-         && upThis.Files.Equals(upO.Files)
-         && upThis.Method = upO.Method
-         && upThis.Resource = upO.Resource
-         && upThis.RequestFormat = upO.RequestFormat
-         && upThis.RootElement = upO.RootElement
-         && upThis.DateFormat = upO.DateFormat
-         && upThis.XmlNamespace = upO.XmlNamespace
-         && upThis.Timeout = upO.Timeout
-         && upThis.Attempts = upO.Attempts
-         && upThis.UseDefaultCredentials = upO.UseDefaultCredentials
-         && upThis.AllowedDecompressionMethods.Equals(upO.AllowedDecompressionMethods))
+        let printAndEqSign s a b =
+            let r = a = b
+            // printfn "\n%s %A %A -> %A" s a b r
+            r
+        ((printAndEqSign "AlwaysMultipartFormData" upThis.AlwaysMultipartFormData upO.AlwaysMultipartFormData)
+         && (CompareLists (fun (p: Parameter) -> p.Name) CompareParameter (upThis.Parameters) (upO.Parameters))
+         && (CompareLists (fun (p: FileParameter) -> p.Name) CompareFileParameter (upThis.Files) (upO.Files))
+         && (printAndEqSign "Method" upThis.Method upO.Method)
+         && (printAndEqSign "Resource" upThis.Resource upO.Resource)
+         && (printAndEqSign "RequestFormat" upThis.RequestFormat upO.RequestFormat)
+         && (printAndEqSign "RootElement" upThis.RootElement upO.RootElement)
+         && (printAndEqSign "DateFormat" upThis.DateFormat upO.DateFormat)
+         && (printAndEqSign "XmlNamespace" upThis.XmlNamespace upO.XmlNamespace)
+         && (printAndEqSign "Timeout" upThis.Timeout upO.Timeout)
+         && (printAndEqSign "Attempts" upThis.Attempts upO.Attempts)
+         && (printAndEqSign "UseDefaultCredentials" upThis.UseDefaultCredentials upO.UseDefaultCredentials)
+         && (CompareLists id (=) (this.InternalAllowedDecompressionMethods) (o.InternalAllowedDecompressionMethods)))
 
     interface IRestRequest with
         /// <summary>
@@ -256,4 +274,15 @@ let accept2types((t1, t2):string * string) =
 let main argv =
     printfn "Hello World from F#!";
     Check.One({ Config.Quick with MaxTest = 10; QuietOnSuccess=false }, accept2types);
+    let rm1 = RequestModel()
+    let rm2 = RequestModel()
+    let rm3 = RequestModel()
+    let up (x : RequestModel) = x :> IRestRequest
+    (up rm1).AddHeader("X-Test", "Value") |> ignore
+    (up rm2).AddHeader("X-Test", "Value") |> ignore
+    (up rm3).AddHeader("X-Test", "Value") |> ignore
+    printfn "%A" 1
+    printfn "rm1=rm2: %A rm2=rm3: %A rm1=rm3: %A" (rm1.Equals(rm2)) (rm2.Equals(rm3)) (rm1.Equals(rm3))
+    (up rm2).AddOrUpdateParameter("X-Test", "qw45") |> ignore
+    printfn "rm1=rm2: %A rm2=rm3: %A rm1=rm3: %A" (rm1.Equals(rm2)) (rm2.Equals(rm3)) (rm1.Equals(rm3))
     0 // return an integer exit code
